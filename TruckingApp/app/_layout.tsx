@@ -1,3 +1,4 @@
+import 'react-native-gesture-handler';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack, useRouter, useSegments } from 'expo-router';
@@ -16,11 +17,11 @@ function AuthLayout() {
   useEffect(() => {
     if (loading) return;
 
-    const inAuthGroup = segments[0] === '(auth)';
+    const inTabsGroup = segments[0] === '(tabs)';
 
-    if (token && !inAuthGroup) {
+    if (token && !inTabsGroup) {
       router.replace('/(tabs)');
-    } else if (!token) {
+    } else if (!token && !['login', 'register'].includes(segments[0])) {
       router.replace('/login');
     }
   }, [token, loading, segments]);
@@ -28,6 +29,7 @@ function AuthLayout() {
   return (
     <Stack>
       <Stack.Screen name="login" options={{ headerShown: false }} />
+      <Stack.Screen name="register" options={{ headerShown: false }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="+not-found" />
     </Stack>
