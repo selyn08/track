@@ -3,9 +3,11 @@ require('dotenv').config();
 
 const express = require('express');
 const app = express();
+const cors = require('cors');
 
 // Middleware to parse JSON bodies
 app.use(express.json());
+app.use(cors());
 
 // Import routes
 const authRoutes = require('./routes/auth');
