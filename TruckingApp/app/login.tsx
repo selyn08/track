@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { View, TextInput, Button, StyleSheet, Text } from 'react-native';
+import { View, TextInput, Button, StyleSheet, Text, Pressable } from 'react-native';
 import { useAuth } from '../src/contexts/AuthContext';
-import { useRouter } from 'expo-router';
+import { Link, useRouter } from 'expo-router';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -39,7 +39,11 @@ export default function LoginScreen() {
       />
       <Button title="Login" onPress={handleLogin} />
       <View style={styles.separator} />
-      <Button title="Create Account" onPress={() => router.push('/register')} />
+      <Link href="/register" asChild>
+        <Pressable style={styles.button}>
+          <Text style={styles.buttonText}>Create Account</Text>
+        </Pressable>
+      </Link>
     </View>
   );
 }
@@ -66,5 +70,15 @@ const styles = StyleSheet.create({
   },
   separator: {
     marginVertical: 8,
+  },
+  button: {
+    backgroundColor: '#007AFF',
+    padding: 10,
+    borderRadius: 5,
+    alignItems: 'center',
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 16,
   },
 });
