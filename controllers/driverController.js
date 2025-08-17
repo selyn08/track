@@ -5,13 +5,13 @@ const { validationResult } = require('express-validator');
 exports.getDriver = async (req, res) => {
   try {
     // req.driver.id is from the authMiddleware
-    const driver = await db.query('SELECT id, name, email, working_hours, created_at FROM drivers WHERE id = $1', [req.driver.id]);
+    const driver = await db.get('SELECT id, name, email, working_hours, created_at FROM drivers WHERE id = ?', [req.driver.id]);
 
-    if (driver.rows.length === 0) {
+    if (!driver) {
       return res.status(404).json({ msg: 'Driver not found' });
     }
 
-    res.json(driver.rows[0]);
+    res.json(driver);
   } catch (err) {
     console.error(err.message);
     res.status(500).send('Server Error');
@@ -28,29 +28,32 @@ exports.updateDriver = async (req, res) => {
   const { name, working_hours } = req.body;
   const driverId = req.driver.id;
 
-  // Build driver object
-  const driverFields = {};
-  if (name) driverFields.name = name;
-  if (working_hours) driverFields.working_hours = working_hours;
-
   try {
     // Check if driver exists
-    let driver = await db.query('SELECT * FROM drivers WHERE id = $1', [driverId]);
-    if (driver.rows.length === 0) {
+    let driver = await db.get('SELECT * FROM drivers WHERE id = ?', [driverId]);
+    if (!driver) {
       return res.status(404).json({ msg: 'Driver not found' });
     }
 
+    // Build driver object
+    const driverFields = {
+        name: name || driver.name,
+        working_hours: working_hours || driver.working_hours
+    };
+
     // Update
-    const updatedDriver = await db.query(
-      'UPDATE drivers SET name = $1, working_hours = $2 WHERE id = $3 RETURNING id, name, email, working_hours',
+    await db.run(
+      'UPDATE drivers SET name = ?, working_hours = ? WHERE id = ?',
       [
-        driverFields.name || driver.rows[0].name,
-        driverFields.working_hours || driver.rows[0].working_hours,
+        driverFields.name,
+        driverFields.working_hours,
         driverId
       ]
     );
 
-    res.json(updatedDriver.rows[0]);
+    const updatedDriver = await db.get('SELECT id, name, email, working_hours FROM drivers WHERE id = ?', [driverId]);
+
+    res.json(updatedDriver);
   } catch (err) {
     console.error(err.message);
     res.status(500).send('Server Error');
@@ -62,20 +65,19 @@ exports.deleteDriver = async (req, res) => {
   try {
     const driverId = req.driver.id;
     // Check if driver exists
-    let driver = await db.query('SELECT * FROM drivers WHERE id = $1', [driverId]);
-    if (driver.rows.length === 0) {
+    let driver = await db.get('SELECT * FROM drivers WHERE id = ?', [driverId]);
+    if (!driver) {
       return res.status(404).json({ msg: 'Driver not found' });
     }
 
     // We can't delete a driver who has ongoing trips.
-    // The trips table has ON DELETE SET NULL, but it's better to prevent this case.
-    const ongoingTrips = await db.query('SELECT * FROM trips WHERE driver_id = $1 AND end_time IS NULL', [driverId]);
-    if(ongoingTrips.rows.length > 0) {
+    const ongoingTrips = await db.all('SELECT * FROM trips WHERE driver_id = ? AND end_time IS NULL', [driverId]);
+    if(ongoingTrips.length > 0) {
         return res.status(400).json({ msg: 'Cannot delete driver with ongoing trips.' });
     }
 
     // Delete driver
-    await db.query('DELETE FROM drivers WHERE id = $1', [driverId]);
+    await db.run('DELETE FROM drivers WHERE id = ?', [driverId]);
 
     res.json({ msg: 'Driver deleted' });
   } catch (err) {

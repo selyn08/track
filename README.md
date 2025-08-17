@@ -1,13 +1,13 @@
 # Trucking Company Backend API
 
-This is a complete Node.js backend API for a fictional trucking company. It includes authentication, and CRUD APIs for managing drivers and trips.
+This is a complete Node.js backend API for a fictional trucking company. It includes authentication, and CRUD APIs for managing drivers and trips. It uses Express.js and SQLite.
 
 ## Features
 
 - **Authentication**: Driver registration, login/logout with JWT.
 - **Drivers API**: CRUD operations for driver profiles.
 - **Trips API**: CRUD operations for trips.
-- **Database**: PostgreSQL schema and connection management.
+- **Database**: SQLite database with schema and connection management.
 - **Validation**: Input validation for all endpoints.
 - **Error Handling**: Centralized error handling.
 
@@ -18,11 +18,12 @@ This is a complete Node.js backend API for a fictional trucking company. It incl
 ├── app.js              # Main application file
 ├── package.json        # Project dependencies and scripts
 ├── README.md           # This file
-├── .env                # Environment variables (you need to create this)
+├── .env                # Environment variables
 ├── .gitignore          # Files to be ignored by Git
 ├── db/
-│   ├── db.js           # PostgreSQL connection pool
-│   └── init.sql        # Database schema initialization script
+│   ├── db.js           # SQLite connection
+│   ├── init.sql        # Database schema initialization script
+│   └── trucking.db     # SQLite database file (will be created automatically)
 ├── routes/
 │   ├── auth.js         # Authentication routes
 │   ├── drivers.js      # Driver routes
@@ -38,7 +39,7 @@ This is a complete Node.js backend API for a fictional trucking company. It incl
 ## Prerequisites
 
 - [Node.js](https://nodejs.org/) (v14 or later)
-- [PostgreSQL](https://www.postgresql.org/)
+- [SQLite3](https://www.sqlite.org/index.html) command-line tool (for initializing the database).
 
 ## Getting Started
 
@@ -57,24 +58,11 @@ npm install
 
 ### 3. Set up environment variables
 
-Create a `.env` file in the root of the project by copying the provided `.env` file.
-
-```bash
-cp .env .env
-```
-
-Now, open the `.env` file and update the following variables with your PostgreSQL credentials and a secure JWT secret:
+Create a `.env` file in the root of the project. You can just create an empty file, or copy the following content. The only required variable is the `JWT_SECRET`.
 
 ```
 # Server Configuration
 PORT=3000
-
-# PostgreSQL Database Configuration
-DB_USER=your_db_user
-DB_HOST=localhost
-DB_DATABASE=trucking_db
-DB_PASSWORD=your_db_password
-DB_PORT=5432
 
 # JWT Configuration
 JWT_SECRET=a_very_secret_key_that_should_be_long_and_random
@@ -82,13 +70,15 @@ JWT_SECRET=a_very_secret_key_that_should_be_long_and_random
 
 ### 4. Set up the database
 
-1.  Make sure your PostgreSQL server is running.
-2.  Connect to PostgreSQL and create a new database. You can name it `trucking_db` or whatever you specified in your `.env` file.
-3.  Run the `db/init.sql` script to create the necessary tables. You can do this using a tool like `psql`:
+The database file `db/trucking.db` will be created automatically when you start the server for the first time.
+
+To initialize the database with the required tables, run the following command:
 
 ```bash
-psql -U your_db_user -d trucking_db -f db/init.sql
+npm run db:init
 ```
+
+This will execute the `db/init.sql` script.
 
 ### 5. Run the server
 

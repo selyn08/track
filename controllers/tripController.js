@@ -12,12 +12,13 @@ exports.createTrip = async (req, res) => {
   const driver_id = req.driver.id; // from auth middleware
 
   try {
-    const newTrip = await db.query(
-      'INSERT INTO trips (driver_id, destination, cargo, commission_type) VALUES ($1, $2, $3, $4) RETURNING *',
+    const result = await db.run(
+      'INSERT INTO trips (driver_id, destination, cargo, commission_type) VALUES (?, ?, ?, ?)',
       [driver_id, destination, cargo, commission_type]
     );
 
-    res.status(201).json(newTrip.rows[0]);
+    const newTrip = await db.get('SELECT * FROM trips WHERE id = ?', [result.lastID]);
+    res.status(201).json(newTrip);
   } catch (err) {
     console.error(err.message);
     res.status(500).send('Server Error');
@@ -27,8 +28,8 @@ exports.createTrip = async (req, res) => {
 // Get all trips
 exports.getAllTrips = async (req, res) => {
   try {
-    const trips = await db.query('SELECT * FROM trips ORDER BY start_time DESC');
-    res.json(trips.rows);
+    const trips = await db.all('SELECT * FROM trips ORDER BY start_time DESC');
+    res.json(trips);
   } catch (err) {
     console.error(err.message);
     res.status(500).send('Server Error');
@@ -38,8 +39,8 @@ exports.getAllTrips = async (req, res) => {
 // Get trips by driver
 exports.getTripsByDriver = async (req, res) => {
     try {
-      const trips = await db.query('SELECT * FROM trips WHERE driver_id = $1 ORDER BY start_time DESC', [req.params.id]);
-      res.json(trips.rows);
+      const trips = await db.all('SELECT * FROM trips WHERE driver_id = ? ORDER BY start_time DESC', [req.params.id]);
+      res.json(trips);
     } catch (err) {
       console.error(err.message);
       res.status(500).send('Server Error');
@@ -49,8 +50,8 @@ exports.getTripsByDriver = async (req, res) => {
 // Get ongoing trips
 exports.getOngoingTrips = async (req, res) => {
     try {
-        const trips = await db.query('SELECT * FROM trips WHERE end_time IS NULL ORDER BY start_time DESC');
-        res.json(trips.rows);
+        const trips = await db.all('SELECT * FROM trips WHERE end_time IS NULL ORDER BY start_time DESC');
+        res.json(trips);
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server Error');
@@ -69,22 +70,23 @@ exports.updateTrip = async (req, res) => {
   const tripId = req.params.id;
 
   try {
-    let trip = await db.query('SELECT * FROM trips WHERE id = $1', [tripId]);
-    if (trip.rows.length === 0) {
+    let trip = await db.get('SELECT * FROM trips WHERE id = ?', [tripId]);
+    if (!trip) {
       return res.status(404).json({ msg: 'Trip not found' });
     }
 
     // Ensure the driver owns the trip
-    if (trip.rows[0].driver_id !== req.driver.id) {
+    if (trip.driver_id !== req.driver.id) {
       return res.status(401).json({ msg: 'Not authorized' });
     }
 
-    const updatedTrip = await db.query(
-      'UPDATE trips SET destination = $1, cargo = $2, commission_type = $3 WHERE id = $4 RETURNING *',
+    await db.run(
+      'UPDATE trips SET destination = ?, cargo = ?, commission_type = ? WHERE id = ?',
       [destination, cargo, commission_type, tripId]
     );
 
-    res.json(updatedTrip.rows[0]);
+    const updatedTrip = await db.get('SELECT * FROM trips WHERE id = ?', [tripId]);
+    res.json(updatedTrip);
   } catch (err) {
     console.error(err.message);
     res.status(500).send('Server Error');
@@ -95,26 +97,27 @@ exports.updateTrip = async (req, res) => {
 exports.endTrip = async (req, res) => {
     const tripId = req.params.id;
     try {
-        let trip = await db.query('SELECT * FROM trips WHERE id = $1', [tripId]);
-        if (trip.rows.length === 0) {
+        let trip = await db.get('SELECT * FROM trips WHERE id = ?', [tripId]);
+        if (!trip) {
             return res.status(404).json({ msg: 'Trip not found' });
         }
 
         // Ensure the driver owns the trip
-        if (trip.rows[0].driver_id !== req.driver.id) {
+        if (trip.driver_id !== req.driver.id) {
             return res.status(401).json({ msg: 'Not authorized' });
         }
 
-        if(trip.rows[0].end_time) {
+        if(trip.end_time) {
             return res.status(400).json({ msg: 'Trip has already ended.' });
         }
 
-        const endedTrip = await db.query(
-            'UPDATE trips SET end_time = NOW() WHERE id = $1 RETURNING *',
+        await db.run(
+            'UPDATE trips SET end_time = CURRENT_TIMESTAMP WHERE id = ?',
             [tripId]
         );
 
-        res.json(endedTrip.rows[0]);
+        const endedTrip = await db.get('SELECT * FROM trips WHERE id = ?', [tripId]);
+        res.json(endedTrip);
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server Error');
@@ -126,17 +129,17 @@ exports.endTrip = async (req, res) => {
 exports.deleteTrip = async (req, res) => {
   try {
     const tripId = req.params.id;
-    let trip = await db.query('SELECT * FROM trips WHERE id = $1', [tripId]);
-    if (trip.rows.length === 0) {
+    let trip = await db.get('SELECT * FROM trips WHERE id = ?', [tripId]);
+    if (!trip) {
       return res.status(404).json({ msg: 'Trip not found' });
     }
 
     // Ensure the driver owns the trip
-    if (trip.rows[0].driver_id !== req.driver.id) {
+    if (trip.driver_id !== req.driver.id) {
       return res.status(401).json({ msg: 'Not authorized' });
     }
 
-    await db.query('DELETE FROM trips WHERE id = $1', [tripId]);
+    await db.run('DELETE FROM trips WHERE id = ?', [tripId]);
 
     res.json({ msg: 'Trip removed' });
   } catch (err) {

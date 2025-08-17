@@ -14,8 +14,8 @@ exports.register = async (req, res) => {
 
   try {
     // Check if driver already exists
-    const driverExists = await db.query('SELECT * FROM drivers WHERE email = $1', [email]);
-    if (driverExists.rows.length > 0) {
+    const driverExists = await db.get('SELECT * FROM drivers WHERE email = ?', [email]);
+    if (driverExists) {
       return res.status(400).json({ msg: 'Driver already exists' });
     }
 
@@ -24,12 +24,15 @@ exports.register = async (req, res) => {
     const password_hash = await bcrypt.hash(password, salt);
 
     // Save driver to database
-    const newDriver = await db.query(
-      'INSERT INTO drivers (name, email, password_hash) VALUES ($1, $2, $3) RETURNING id, name, email',
+    const result = await db.run(
+      'INSERT INTO drivers (name, email, password_hash) VALUES (?, ?, ?)',
       [name, email, password_hash]
     );
 
-    res.status(201).json(newDriver.rows[0]);
+    // Get the new driver's data
+    const newDriver = await db.get('SELECT id, name, email FROM drivers WHERE id = ?', [result.lastID]);
+
+    res.status(201).json(newDriver);
   } catch (err) {
     console.error(err.message);
     res.status(500).send('Server error');
@@ -47,13 +50,13 @@ exports.login = async (req, res) => {
 
   try {
     // Check if driver exists
-    const driver = await db.query('SELECT * FROM drivers WHERE email = $1', [email]);
-    if (driver.rows.length === 0) {
+    const driver = await db.get('SELECT * FROM drivers WHERE email = ?', [email]);
+    if (!driver) {
       return res.status(400).json({ msg: 'Invalid credentials' });
     }
 
     // Check password
-    const isMatch = await bcrypt.compare(password, driver.rows[0].password_hash);
+    const isMatch = await bcrypt.compare(password, driver.password_hash);
     if (!isMatch) {
       return res.status(400).json({ msg: 'Invalid credentials' });
     }
@@ -61,7 +64,7 @@ exports.login = async (req, res) => {
     // Create and sign JWT
     const payload = {
       driver: {
-        id: driver.rows[0].id,
+        id: driver.id,
       },
     };
 
