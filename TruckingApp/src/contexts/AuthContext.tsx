@@ -1,6 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { login as loginApi } from '../api/auth';
+import { login as loginApi, register as registerApi } from '../api/auth';
 
 const AuthContext = createContext(null);
 
@@ -41,8 +41,17 @@ export const AuthProvider = ({ children }) => {
     await AsyncStorage.removeItem('token');
   };
 
+  const register = async (userData) => {
+    try {
+      await registerApi(userData);
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, loading }}>
+    <AuthContext.Provider value={{ user, token, login, logout, register, loading }}>
       {children}
     </AuthContext.Provider>
   );

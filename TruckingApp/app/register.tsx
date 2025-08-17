@@ -1,27 +1,36 @@
 import React, { useState } from 'react';
-import { View, TextInput, Button, StyleSheet, Text } from 'react-native';
+import { View, TextInput, Button, StyleSheet, Text, Alert } from 'react-native';
 import { useAuth } from '../src/contexts/AuthContext';
 import { useRouter } from 'expo-router';
 
-export default function LoginScreen() {
+export default function RegisterScreen() {
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const { login } = useAuth();
+  const { register } = useAuth();
   const router = useRouter();
 
-  const handleLogin = async () => {
+  const handleRegister = async () => {
     try {
-      await login({ email, password });
-      router.replace('/(tabs)');
+      await register({ name, email, password });
+      Alert.alert('Success', 'Account created successfully!');
+      router.replace('/login');
     } catch (error) {
       console.error(error);
-      // You can add some error handling here, like showing an alert
+      Alert.alert('Error', 'Failed to create account.');
     }
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Driver Login</Text>
+      <Text style={styles.title}>Create Account</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="Name"
+        value={name}
+        onChangeText={setName}
+        autoCapitalize="words"
+      />
       <TextInput
         style={styles.input}
         placeholder="Email"
@@ -37,9 +46,7 @@ export default function LoginScreen() {
         onChangeText={setPassword}
         secureTextEntry
       />
-      <Button title="Login" onPress={handleLogin} />
-      <View style={styles.separator} />
-      <Button title="Create Account" onPress={() => router.push('/register')} />
+      <Button title="Create Account" onPress={handleRegister} />
     </View>
   );
 }
@@ -63,8 +70,5 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     marginBottom: 12,
     paddingHorizontal: 8,
-  },
-  separator: {
-    marginVertical: 8,
   },
 });
